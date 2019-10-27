@@ -29,6 +29,8 @@
 
 #include <gst/gst.h>
 
+#define DEFAULT_BITRATES 20000000
+
 /* *INDENT-OFF* */
 #if !GLIB_CHECK_VERSION(2,57,1)
 G_DEFINE_AUTOPTR_CLEANUP_FUNC(GEnumClass, g_type_class_unref)
@@ -357,7 +359,8 @@ _lookup_enc_string (GaeguliEncodingMethod encoding_method,
 
 static GstElement *
 _build_target_pipeline (GaeguliEncodingMethod encoding_method,
-    GaeguliVideoCodec codec, const gchar * fifo_path, GError ** error)
+    GaeguliVideoCodec codec, const gchar * fifo_path, guint bitrates,
+    GError ** error)
 {
   g_autoptr (GstElement) target_pipeline = NULL;
   g_autoptr (GstElement) enc_first = NULL;
@@ -378,14 +381,16 @@ _build_target_pipeline (GaeguliEncodingMethod encoding_method,
 
   if (encoding_method == GAEGULI_ENCODING_METHOD_NVIDIA_TX1) {
     /* FIXME: need to add bandwidth parameter */
-    pipeline_str = g_strdup_printf (enc_pipeline_str, 20000000);
+    pipeline_str = g_strdup_printf (enc_pipeline_str, bitrates);
     pipeline_str = g_strdup_printf ("%s ! "
         GAEGULI_PIPELINE_MUXSINK_STR, pipeline_str, fifo_path);
   } else {
+    pipeline_str = g_strdup_printf (enc_pipeline_str, bitrates);
     pipeline_str = g_strdup_printf ("%s ! "
         GAEGULI_PIPELINE_MUXSINK_STR, enc_pipeline_str, fifo_path);
   }
 
+  g_debug ("LINA >>>> PIPELINE %s", pipeline_str);
   target_pipeline = gst_parse_launch (pipeline_str, &internal_err);
   if (target_pipeline == NULL) {
     g_error ("failed to build muxsink pipeline (%s)", internal_err->message);
@@ -472,6 +477,7 @@ _build_vsrc_pipeline (GaeguliPipeline * self, GaeguliVideoResolution resolution,
       break;
   }
 
+  g_debug ("\n\n resolution %d %d\n\n", width, height);
   src_description = _get_source_description (self);
 
   /* FIXME: what if zero-copy */
@@ -606,7 +612,8 @@ _link_probe_cb (GstPad * pad, GstPadProbeInfo * info, gpointer user_data)
 guint
 gaeguli_pipeline_add_fifo_target_full (GaeguliPipeline * self,
     GaeguliVideoCodec codec,
-    GaeguliVideoResolution resolution, const gchar * fifo_path, GError ** error)
+    GaeguliVideoResolution resolution, const gchar * fifo_path, guint bitrates,
+    GError ** error)
 {
   guint target_id = 0;
   g_autoptr (GstElement) target_pipeline = NULL;
@@ -652,7 +659,7 @@ gaeguli_pipeline_add_fifo_target_full (GaeguliPipeline * self,
 
     target_pipeline =
         _build_target_pipeline (self->encoding_method, codec,
-        fifo_path, &internal_err);
+        fifo_path, bitrates, &internal_err);
 
     /* linking target pipeline with vsrc */
     if (target_pipeline == NULL) {
@@ -693,7 +700,7 @@ gaeguli_pipeline_add_fifo_target (GaeguliPipeline * self,
     const gchar * fifo_path, GError ** error)
 {
   return gaeguli_pipeline_add_fifo_target_full (self, DEFAULT_VIDEO_CODEC,
-      DEFAULT_VIDEO_RESOLUTION, fifo_path, error);
+      DEFAULT_VIDEO_RESOLUTION, fifo_path, DEFAULT_BITRATES, error);
 }
 
 GaeguliReturn

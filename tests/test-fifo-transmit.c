@@ -25,6 +25,7 @@
 #include <gst/gst.h>
 
 #define FIFO_READ_LIMIT_BYTES 10000
+#define PIPELINE_BITRATES 20000000
 
 typedef struct _TestFixture
 {
@@ -132,7 +133,8 @@ add_remove_fifo_cb (AddRemoveTestData * data)
 
       fifo->target_id = gaeguli_pipeline_add_fifo_target_full (data->pipeline,
           GAEGULI_VIDEO_CODEC_H264, GAEGULI_VIDEO_RESOLUTION_640x480,
-          gaeguli_fifo_transmit_get_fifo (fifo->transmit), &error);
+          gaeguli_fifo_transmit_get_fifo (fifo->transmit), PIPELINE_BITRATES,
+          &error);
       g_assert_no_error (error);
 
       g_debug ("Added fifo %u", fifo->transmit_id);
@@ -282,7 +284,7 @@ read_from_pipeline (GaeguliFifoTransmit * transmit, gsize bytes_read_limit)
   target_id =
       gaeguli_pipeline_add_fifo_target_full (pipeline, GAEGULI_VIDEO_CODEC_H264,
       GAEGULI_VIDEO_RESOLUTION_640x480,
-      gaeguli_fifo_transmit_get_fifo (transmit), &error);
+      gaeguli_fifo_transmit_get_fifo (transmit), PIPELINE_BITRATES, &error);
   g_assert_no_error (error);
 
   g_debug ("Started reading from pipeline %p", pipeline);
@@ -497,7 +499,7 @@ test_gaeguli_fifo_transmit_listener (TestFixture * fixture,
 
   gaeguli_pipeline_add_fifo_target_full (pipeline,
       GAEGULI_VIDEO_CODEC_H264, GAEGULI_VIDEO_RESOLUTION_640x480,
-      gaeguli_fifo_transmit_get_fifo (transmit), &error);
+      gaeguli_fifo_transmit_get_fifo (transmit), PIPELINE_BITRATES, &error);
   g_assert_no_error (error);
 
   transmit_id = gaeguli_fifo_transmit_start (transmit, "127.0.0.1", 8888,
@@ -668,7 +670,7 @@ test_gaeguli_fifo_transmit_reuse (TestFixture * fixture, gconstpointer unused)
 
   gaeguli_pipeline_add_fifo_target_full (pipeline,
       GAEGULI_VIDEO_CODEC_H264, GAEGULI_VIDEO_RESOLUTION_640x480,
-      gaeguli_fifo_transmit_get_fifo (transmit), &error);
+      gaeguli_fifo_transmit_get_fifo (transmit), PIPELINE_BITRATES, &error);
   g_assert_no_error (error);
 
   data.transmit_id = gaeguli_fifo_transmit_start (transmit, "127.0.0.1", 8888,
